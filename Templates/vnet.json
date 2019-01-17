@@ -1,0 +1,270 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "virtualNetworkName": {
+      "type": "string",
+      "metadata": {
+        "Description": "The name of the Virtual Network to Create"
+      }
+    },
+    "virtualNetworkAddressRange": {
+      "type": "string",
+      "metadata": {
+        "Description": "The address range of the new VNET in CIDR format"
+      },
+      "defaultValue": "192.168.0.0/16"
+    },
+    "ADSubnetName": {
+      "type": "string",
+      "metadata": {
+        "Description": "The name of the AD subnet created in the new VNET"
+      }
+    },
+    "ADSubnetRange": {
+      "type": "string",
+      "metadata": {
+        "Description": "The address range of the AD subnet created in the new VNET"
+      }
+    },
+    "ToolSubnetName": {
+      "type": "string",
+      "metadata": {
+        "Description": "The name of the subnet created in the new VNET"
+      }
+    },
+    "ToolSubnetRange": {
+      "type": "string",
+      "metadata": {
+        "Description": "The address range of the subnet created in the new VNET"
+      }
+    },
+    "PublicSubnetName": {
+      "type": "string",
+      "metadata": {
+        "Description": "The name of the subnet created in the new VNET"
+      }
+    },
+    "PublicSubnetRange": {
+      "type": "string",
+      "metadata": {
+        "Description": "The address range of the Public subnet created in the new VNET"
+      }
+    },
+    "AppGtwSubnetName": {
+      "type": "string",
+      "metadata": {
+        "Description": "The name of the subnet created in the new VNET"
+      }
+    },
+    "AppGtwSubnetRange": {
+      "type": "string",
+      "metadata": {
+        "Description": "The address range of the Public subnet created in the new VNET"
+      }
+    },
+    "ADNSGName": {
+      "type": "string",
+      "metadata": {
+        "Description": "The name of the AD subnet NSG"
+      }
+    },
+    "ToolNSGName": {
+      "type": "string",
+      "metadata": {
+        "Description": "The name of the Tools subnet NSG"
+      }
+    },
+    "PublicNSGName": {
+      "type": "string",
+      "metadata": {
+        "Description": "The name of the Public subnet NSG "
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Location for all resources."
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "name": "[parameters('ADNSGName')]",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2018-03-01",
+      "properties": {
+        "securityRules": [
+          {
+            "name": "ADNSGRule1",
+            "properties": {
+              "description": "Allows traffic from Tool and Public subnets",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefixes": [
+                "[parameters('PublicSubnetRange')]",
+                "[parameters('ToolSubnetRange')]"
+              ],  
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 100,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "ADNSGRule2",
+            "properties": {
+              "description": "Deny traffic from external",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "3389",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Deny",
+              "priority": 200,
+              "direction": "Inbound"
+            }
+          }  
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "name": "[parameters('ToolNSGName')]",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2018-03-01",
+      "properties": {
+        "securityRules": [
+          {
+            "name": "toolNSGRule1",
+            "properties": {
+              "description": "Allows traffic from AD and Public subnets",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefixes": [
+                "[parameters('PublicSubnetRange')]",
+                "[parameters('ADSubnetRange')]"
+              ],  
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 100,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "toolNSGRule2",
+            "properties": {
+              "description": "Deny traffic from external",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "3389",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Deny",
+              "priority": 200,
+              "direction": "Inbound"
+            }
+          }  
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "name": "[parameters('PublicNSGName')]",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2018-03-01",
+      "properties": {
+        "securityRules": [
+          {
+            "name": "PublicNSGRule1",
+            "properties": {
+              "description": "Allows traffic from Tool and Public subnets",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefixes": [
+                "[parameters('ADSubnetRange')]",
+                "[parameters('ToolSubnetRange')]"
+              ],  
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 200,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "PublicNSGRule2",
+            "properties": {
+              "description": "Allows traffic from Tool and Public subnets",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "3389",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 100,
+              "direction": "Inbound"
+            }
+          }  
+        ]
+      }
+    },
+    {
+      "name": "[parameters('virtualNetworkName')]",
+      "type": "Microsoft.Network/virtualNetworks",
+      "location": "[parameters('location')]",
+      "apiVersion": "2018-08-01",
+      "dependsOn": [
+        "[concat('Microsoft.Network/networkSecurityGroups/', parameters('ADNSGName'))]",
+        "[concat('Microsoft.Network/networkSecurityGroups/', parameters('PublicNSGName'))]",
+        "[concat('Microsoft.Network/networkSecurityGroups/', parameters('ToolNSGName'))]"
+      ],
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[parameters('virtualNetworkAddressRange')]"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "[parameters('ADSubnetName')]",
+            "properties": {
+              "addressPrefix": "[parameters('ADSubnetRange')]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('ADNSGName'))]"
+              }
+            }
+          },
+          {
+            "name": "[parameters('PublicSubnetName')]",
+            "properties": {
+              "addressPrefix": "[parameters('PublicSubnetRange')]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('PublicNSGName'))]"
+              }
+            }
+          },
+		      {
+            "name": "[parameters('ToolSubnetName')]",
+            "properties": {
+              "addressPrefix": "[parameters('ToolsubnetRange')]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('ToolNSGName'))]"
+              }
+            }
+          },
+          {
+            "name": "[parameters('AppGtwSubnetName')]",
+            "properties": {
+              "addressPrefix": "[parameters('AppGtwSubnetRange')]"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

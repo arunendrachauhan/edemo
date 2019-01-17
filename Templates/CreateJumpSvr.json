@@ -1,0 +1,219 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "virtualNetworkName": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of existing Virtual Network"
+      }
+    },
+    "PublicSubnetName": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the existing subnet in the VNET"
+      }
+    },
+    "PublicNSGName": {
+      "type": "string",
+      "metadata": {
+        "Description": "The name of the AD subnet NSG"
+      }
+    },
+    "vmName": {
+      "type": "string",
+      "metadata": {
+        "description": "The computer name for the new VM."
+      }
+    },
+    "vmIpAddress": {
+      "type": "string",
+      "defaultValue": "192.168.1.4",
+      "metadata": {
+        "description": "The IP address for the new VM"
+      }
+    },
+    "vmAdminUsername": {
+      "type": "string",
+      "defaultValue": "Admin123",
+      "metadata": {
+        "description": "The name of the admin account for the VM"
+      }
+    },
+    "vmAdminPassword": {
+      "type": "securestring",
+      "defaultValue": "Password@123",
+      "metadata": {
+        "description": "The password for the Administrator account of the new VM"
+      }
+    },
+    "vmSize": {
+      "type": "string",
+      "metadata": {
+        "description": "The size of the VM Created"
+      },
+      "defaultValue": "Standard_DS1_v2"
+    },
+    "imageSKU": {
+      "type": "string",
+      "defaultValue": "2016-Datacenter",
+      "allowedValues": [
+        "2012-R2-Datacenter",
+        "2016-Datacenter"
+      ],
+      "metadata": {
+        "description": "Windows Server Version"
+      }
+    },
+    "diskType": {
+      "type": "string",
+      "defaultValue": "StandardSSD_LRS",
+      "allowedValues": [
+        "StandardSSD_LRS",
+        "Standard_LRS",
+        "Premium_LRS"
+      ],
+      "metadata": {
+        "description": "The Storage type of the data Disks."
+      }
+    },
+	  "_artifactsLocation": {
+      "type": "string"
+    },
+    "_artifactsLocationSasToken": {
+      "type": "securestring",
+      "defaultValue": ""
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Location for all resources."
+      }
+    }
+  },
+  "variables": {
+    "installModulesScriptURI": "[concat(parameters('_artifactsLocation'),'/Scripts/installModules.ps1',parameters('_artifactsLocationSasToken'))]",
+    "PublicSubnetRef": "[resourceId('Microsoft.Network/virtualNetworks/subnets/', parameters('virtualNetworkName'),parameters('PublicSubnetName'))]", 
+    "vmPublicIPName": "[concat(parameters('vmName'),'PublicIP')]",
+    "vmNicName": "[concat(parameters('vmName'),'Nic')]",
+    "vmDataDisk": "[concat(parameters('vmName'),'-managed-DataDisk1')]",
+    "vmOSDisk": "[concat(parameters('vmName'),'-managed-OSDisk')]",
+    "vmDataDiskSize": 10,
+    "imagePublisher": "MicrosoftWindowsServer",
+    "imageOffer": "WindowsServer"
+  },
+  "resources": [
+    {
+      "name": "[variables('vmPublicIPName')]",
+      "type": "Microsoft.Network/publicIPAddresses",
+      "location": "[parameters('location')]",
+      "apiVersion": "2018-08-01",
+      "properties": {
+        "publicIPAllocationMethod": "Dynamic"
+      }
+    },
+    {
+      "name": "[variables('vmNicName')]",
+      "type": "Microsoft.Network/networkInterfaces",
+      "apiVersion": "2018-08-01",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/publicIPAddresses/', variables('vmPublicIPName'))]"
+      ],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAllocationMethod": "Static",
+              "privateIPAddress": "[parameters('vmIPAddress')]",
+              "subnet": {
+                "id": "[variables('PublicSubnetRef')]"
+              },
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('vmPublicIPName'))]"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "[parameters('vmName')]",
+      "type": "Microsoft.Compute/virtualMachines",
+      "apiVersion": "2018-06-01",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkInterfaces',variables('vmNicName'))]"
+      ],
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[parameters('VMSize')]"
+        },
+        "osProfile": {
+          "computerName": "[parameters('vmName')]",
+          "adminUsername": "[parameters('vmAdminUsername')]",
+          "adminPassword": "[parameters('vmAdminPassword')]"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "[variables('imagePublisher')]",
+            "offer": "[variables('imageOffer')]",
+            "sku": "[parameters('imageSKU')]",
+            "version": "latest"
+          },
+          "osDisk": {
+            "name": "[variables('vmOSDisk')]",
+            "caching": "ReadWrite",
+            "createOption": "FromImage",
+            "managedDisk": {
+              "storageAccountType": "[parameters('diskType')]"
+            }
+          },
+          "dataDisks": [
+            {
+              "name": "[variables('vmDataDisk')]",
+              "caching": "None",
+              "lun": 0,
+              "diskSizeGB": "[variables('vmDataDiskSize')]",
+              "createOption": "Empty",
+              "managedDisk": {
+                "storageAccountType": "[parameters('diskType')]"
+              }
+            }
+          ]
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces',variables('vmNicName'))]"
+            }
+          ]
+        }
+      },
+      "resources": [
+        {
+          "apiVersion": "2018-06-01",
+          "type": "Microsoft.Compute/virtualMachines/extensions",
+          "name": "[concat(parameters('vmName'),'/vmEnablePSScript')]",
+          "location": "[parameters('location')]",
+          "dependsOn": [
+            "[resourceId('Microsoft.Compute/virtualMachines', parameters('vmName'))]"
+          ],
+          "properties": {
+            "publisher": "Microsoft.Compute",
+            "type": "CustomScriptExtension",
+            "typeHandlerVersion": "1.9",
+            "autoUpgradeMinorVersion": true,
+			      "settings": {
+              "fileUris" : ["[variables('installModulesScriptURI')]"],
+			        "commandToExecute": "powershell -ExecutionPolicy Unrestricted -file installModules.ps1 -run './installModules.ps1'"
+			      }
+          }
+        }
+      ]
+    }
+  ],
+  "outputs": { }
+}

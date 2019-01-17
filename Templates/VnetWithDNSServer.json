@@ -1,0 +1,155 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "virtualNetworkName": {
+      "type": "string",
+      "metadata": {
+        "Description": "The name of the Virtual Network to Create"
+      }
+    },
+    "virtualNetworkAddressRange": {
+      "type": "string",
+      "metadata": {
+        "Description": "The address range of the new VNET in CIDR format"
+      },
+      "defaultValue": "192.168.0.0/16"
+    },
+    "ADSubnetName": {
+      "type": "string",
+      "metadata": {
+        "Description": "The name of the subnet created in the new VNET"
+      }
+    },
+    "ADSubnetRange": {
+      "type": "string",
+      "metadata": {
+        "Description": "The address range of the subnet created in the new VNET"
+      },
+      "defaultValue": "192.168.2.0/24"
+    },
+    "ADNSGName": {
+      "type": "string",
+      "metadata": {
+        "Description": "The name of an existing NSG to associate with the subnet"
+      }
+    },
+    "ToolSubnetName": {
+      "type": "string",
+      "metadata": {
+        "Description": "The name of the subnet created in the new VNET"
+      }
+    },
+    "ToolSubnetRange": {
+      "type": "string",
+      "metadata": {
+        "Description": "The address range of the subnet created in the new VNET"
+      },
+      "defaultValue": "192.168.3.0/24"
+    },
+    "ToolNSGName": {
+      "type": "string",
+      "metadata": {
+        "Description": "The name of an existing NSG to associate with the subnet"
+      }
+    },
+    "PublicSubnetName": {
+      "type": "string",
+      "metadata": {
+        "Description": "The name of the subnet created in the new VNET"
+      }
+    },
+    "PublicSubnetRange": {
+      "type": "string",
+      "metadata": {
+        "Description": "The address range of the subnet created in the new VNET"
+      },
+      "defaultValue": "192.168.1.0/24"
+    },
+    "PublicNSGName": {
+      "type": "string",
+      "metadata": {
+        "Description": "The name of an existing NSG to associate with the subnet"
+      }
+    },
+    "AppGtwSubnetName": {
+      "type": "string",
+      "metadata": {
+        "Description": "The name of the subnet for App Gateway"
+      }
+    },
+    "AppGtwSubnetRange": {
+      "type": "string",
+      "metadata": {
+        "Description": "The Address range of the subnet"
+      },
+      "defaultValue": "192.168.0.0/24"
+    },
+    "DNSServerAddress": {
+      "type": "array",
+      "metadata": {
+        "Description": "The DNS address(es) of the DNS Server(s) used by the VNET"
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Location for all resources."
+      }
+    }
+  },
+  "resources": [
+    {
+      "name": "[parameters('virtualNetworkName')]",
+      "type": "Microsoft.Network/virtualNetworks",
+      "location": "[parameters('location')]",
+      "apiVersion": "2018-08-01",
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[parameters('virtualNetworkAddressRange')]"
+          ]
+        },
+        "dhcpOptions": {
+          "dnsServers": "[parameters('DNSServerAddress')]"
+        },
+        "subnets": [
+          {
+            "name": "[parameters('ADSubnetName')]",
+            "properties": {
+              "addressPrefix": "[parameters('ADSubnetRange')]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('ADNSGName'))]"
+              }
+            }
+          },
+          {
+            "name": "[parameters('ToolSubnetName')]",
+            "properties": {
+              "addressPrefix": "[parameters('ToolSubnetRange')]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('ToolNSGName'))]"
+              }
+            }
+          },
+          {
+            "name": "[parameters('PublicSubnetName')]",
+            "properties": {
+              "addressPrefix": "[parameters('PublicSubnetRange')]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('PublicNSGName'))]"
+              }
+            }
+          },
+          {
+            "name": "[parameters('AppGtwSubnetName')]",
+            "properties": {
+              "addressPrefix": "[parameters('AppGtwSubnetRange')]"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

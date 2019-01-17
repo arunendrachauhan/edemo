@@ -1,0 +1,77 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "vmName": {
+      "type": "string"
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]"
+    },
+    "DNSServer": {
+      "type": "string"
+    },
+    "adminUserName": {
+      "type": "string",
+      "defaultValue": "Admin123",
+      "metadata": {
+        "description": "The name of the admin account for the VM"
+      }
+    },
+    "adminPassword": {
+      "type": "securestring",
+      "defaultValue": "Password@123",
+      "metadata": {
+        "description": "The password for the Administrator account of the new VM"
+      }
+    },
+    "domainName": {
+      "type": "string"
+    },
+    "_artifactsLocation": {
+      "type": "string"
+    },
+    "_artifactsLocationSasToken": {
+      "type": "securestring",
+      "defaultValue": ""
+    }
+  },
+  "variables": {
+    "MYVMConfigurationModulesURL": "[concat(parameters('_artifactsLocation'),'/Scripts/ConfigureVM.zip',parameters('_artifactsLocationSasToken'))]",
+    "MYVMConfigurationFunction": "ConfigureVM.ps1\\ConfigureVM"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Compute/virtualMachines/extensions",
+      "name": "[concat(parameters('vmName'),'/ConfigureVM')]",
+      "apiVersion": "2018-06-01",
+      "location": "[parameters('location')]",
+      "properties": {
+        "publisher": "Microsoft.Powershell",
+        "type": "DSC",
+        "typeHandlerVersion": "2.21",
+        "autoUpgradeMinorVersion": true,
+        "settings": {
+          "modulesURL": "[variables('MYVMConfigurationModulesURL')]",
+          "configurationFunction": "[variables('MYVMConfigurationFunction')]",
+          "properties": {
+            "domainName": "[parameters('domainName')]",
+            "DNSServer": "[parameters('DNSServer')]",
+            "DNSForwarder": "[parameters('DNSServer')]",
+            "adminCreds": {
+              "userName": "[parameters('adminUserName')]",
+              "password": "privateSettingsRef:adminPassword"
+            }
+          }
+        },
+        "protectedSettings": {
+          "items": {
+            "adminPassword": "[parameters('adminPassword')]"
+          }
+        }
+      }
+    }
+  ],
+  "outputs": {}
+}
